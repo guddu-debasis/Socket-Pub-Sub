@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Modern Socket.IO Chat</title>
+    <!-- Google Fonts for typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --chat-bg: #1e293b;
+        --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --text-color: #f8fafc;
+        --text-muted: #94a3b8;
+        --bubble-self: #4f46e5;
+        --bubble-other: #334155;
+        --border-color: rgba(255, 255, 255, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        height: 100dvh;
+        background-color: var(--bg-color);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Header */
+      header {
+        padding: 1rem 1.5rem;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 10;
+      }
+
+      .header-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        font-size: 1.1rem;
+        letter-spacing: -0.01em;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #ef4444;
+        border-radius: 50%;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+        transition: background-color 0.3s, box-shadow 0.3s;
+      }
+
+      .status-dot.connected {
+        background-color: #22c55e;
+        box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+      }
+
+      /* Messages Area */
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 1.5rem;
+        flex-grow: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        scroll-behavior: smooth;
+      }
+
+      /* Custom Scrollbar */
+      #messages::-webkit-scrollbar {
+        width: 6px;
+      }
+      #messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #messages::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 3px;
+      }
+
+      #messages > li {
+        padding: 0.75rem 1rem;
+        max-width: 75%;
+        border-radius: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        word-break: break-word;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        animation: fadeIn 0.25s ease-out forwards;
+        background-color: var(--bubble-other);
+        color: var(--text-color);
+        align-self: flex-start;
+        border-bottom-left-radius: 0.25rem;
+      }
+
+      /* If you want to differentiate sent vs received messages */
+      #messages > li.self {
+        background: var(--accent-gradient);
+        align-self: flex-end;
+        border-bottom-left-radius: 1rem;
+        border-bottom-right-radius: 0.25rem;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Input Form Area */
+      #form {
+        background: rgba(30, 41, 59, 0.85);
+        padding: 1rem 1.5rem;
+        display: flex;
+        gap: 0.75rem;
+        box-sizing: border-box;
+        backdrop-filter: blur(16px);
+        border-top: 1px solid var(--border-color);
+      }
+
+      #input {
+        border: 1px solid var(--border-color);
+        background: rgba(15, 23, 42, 0.6);
+        padding: 0.75rem 1.25rem;
+        flex-grow: 1;
+        border-radius: 9999px;
+        color: var(--text-color);
+        font-size: 0.95rem;
+        font-family: inherit;
+        transition: all 0.2s ease;
+      }
+
+      #input::placeholder {
+        color: var(--text-muted);
+      }
+
+      #input:focus {
+        outline: none;
+        border-color: #6366f1;
+        background: rgba(15, 23, 42, 0.9);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+
+      #form > button {
+        background: var(--accent-gradient);
+        border: none;
+        padding: 0 1.5rem;
+        border-radius: 9999px;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        font-family: inherit;
+        cursor: pointer;
+        transition: transform 0.1s ease, opacity 0.2s ease;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      }
+
+      #form > button:hover {
+        opacity: 0.9;
+      }
+
+      #form > button:active {
+        transform: scale(0.96);
+      }
+
+      /* Empty State or Welcome Message */
+      .system-notice {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin: 1rem 0;
+        align-self: center !important;
+        background: none !important;
+        box-shadow: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="header-title">
+        <div id="statusDot" class="status-dot" title="Connection Status"></div>
+        <span>Secure Chat Room</span>
+      </div>
+    </header>
+
+    <ul id="messages">
+      <li class="system-notice">Welcome! Say hello to start the conversation.</li>
+    </ul>
+
+    <form id="form" action="">
+      <input id="input" autocomplete="off" placeholder="Type a message..." autofocus /><button>Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      const form = document.getElementById('form');
+      const input = document.getElementById('input');
+      const messages = document.getElementById('messages');
+      const statusDot = document.getElementById('statusDot');
+
+      // Update connection status indicators
+      socket.on('connect', () => {
+        statusDot.classList.add('connected');
+        statusDot.title = "Connected";
+      });
+
+      socket.on('disconnect', () => {
+        statusDot.classList.remove('connected');
+        statusDot.title = "Disconnected";
+      });
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (input.value.trim()) {
+          const msgText = input.value;
+          socket.emit('chat message', msgText);
+          
+          input.value = '';
+        }
+      });
+
+      socket.on('chat message', (msg) => {
+        appendMessage(msg, false);
+      });
+
+      function appendMessage(text, isSelf) {
+        const item = document.createElement('li');
+        item.textContent = text;
+        if (isSelf) {
+          item.classList.add('self');
+        }
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+      }
+    </script>
+  </body>
+</html>
